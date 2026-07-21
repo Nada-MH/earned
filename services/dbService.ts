@@ -42,6 +42,10 @@ class DatabaseService {
     return this.getUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
   }
 
+  getUserById(id: string): UserProfile | undefined {
+    return this.getUsers().find(u => u.id === id);
+  }
+
   // --- COMPANIES / RECRUITERS ---
   getCompanies(): CompanyProfile[] {
     try {
