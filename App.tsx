@@ -202,25 +202,42 @@ const AppContent: React.FC = () => {
   };
 
   const handleTalentAuthComplete = async (profile: UserProfile) => {
+    const isDemo = profile.id === 'demo-talent' || profile.email === 'demo@example.com' || profile.name === 'Alex Chen' || profile.name === 'Demo User';
+
+    if (isDemo) {
+      // For Alex Chen demo user, preserve rich pre-seeded profile & ID
+      const fullDemoUser = db.getUserById('demo-talent') || {
+        ...MOCK_DATA_TEMPLATE,
+        ...profile,
+        id: 'demo-talent',
+        name: 'Alex Chen',
+        email: 'demo@example.com',
+        hiringReadiness: 94
+      };
+      setUser(fullDemoUser);
+      setCompanyUser(null);
+      setCurrentView('talent-dashboard');
+      return;
+    }
+
     setIsGeneratingTree(true);
 
     try {
-      const isDemo = profile.name === "Demo User";
-      const mockHistory = isDemo ? generateMockHistory() : [];
+      const mockHistory: any[] = [];
       const newSkillTree = await generateSkillTree(profile.role, 1);
 
       const fullProfile: UserProfile = {
           ...MOCK_DATA_TEMPLATE,
           ...profile,
-          id: isDemo ? 'demo-talent' : `talent-${Date.now()}`,
+          id: `talent-${Date.now()}`,
           joinedAt: profile.joinedAt || Date.now(),
           history: mockHistory,
           skillTree: newSkillTree, 
           followers: MOCK_DATA_TEMPLATE.followers || 0,
           following: MOCK_DATA_TEMPLATE.following || 0,
           portfolioUrl: MOCK_DATA_TEMPLATE.portfolioUrl,
-          completedStages: mockHistory.length + (newSkillTree.filter(n => n.status === 'completed').length || 0),
-          hiringReadiness: isDemo ? 88 : 10
+          completedStages: (newSkillTree.filter(n => n.status === 'completed').length || 0),
+          hiringReadiness: 50
       };
       
       setUser(fullProfile);
@@ -228,6 +245,8 @@ const AppContent: React.FC = () => {
       setCurrentView('talent-dashboard');
     } catch (e) {
       console.error("Failed to generate skill tree", e);
+      setUser(profile);
+      setCurrentView('talent-dashboard');
     } finally {
       setIsGeneratingTree(false);
     }
