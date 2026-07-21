@@ -163,11 +163,16 @@ const AppContent: React.FC = () => {
   const [companyUser, setCompanyUser] = useState<CompanyProfile | null>(null);
   const [isGeneratingTree, setIsGeneratingTree] = useState(false);
 
-  // App Shared State
+  // App Shared State — Initialized from LocalStorage Database
   const [jobs, setJobs] = useState<JobPosting[]>(INITIAL_JOBS);
   const [candidates, setCandidates] = useState<Candidate[]>(INITIAL_CANDIDATES);
-  const [interviewRequests, setInterviewRequests] = useState<AIInterviewRequest[]>(INITIAL_INTERVIEWS);
-  const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const [interviewRequests, setInterviewRequests] = useState<AIInterviewRequest[]>(() => {
+    const loaded = db.getInterviews();
+    return loaded.length > 0 ? loaded : INITIAL_INTERVIEWS;
+  });
+  const [messages, setMessages] = useState<DirectMessage[]>(() => {
+    return db.getMessages();
+  });
 
   // Sync User Changes to LocalStorage DB
   useEffect(() => {
@@ -246,6 +251,7 @@ const AppContent: React.FC = () => {
   };
 
   const handleSendInterview = (req: AIInterviewRequest) => {
+    db.saveInterview(req);
     setInterviewRequests(prev => [req, ...prev]);
     // Also send an automated direct message notification
     const autoMsg: DirectMessage = {
@@ -260,19 +266,22 @@ const AppContent: React.FC = () => {
       isRead: false,
       interviewRequestId: req.id
     };
+    db.saveMessage(autoMsg);
     setMessages(prev => [autoMsg, ...prev]);
   };
 
   const handleCompleteInterview = (requestId: string, answers: InterviewAnswer[], grading: GradingResult) => {
     setInterviewRequests(prev => prev.map(r => {
       if (r.id === requestId) {
-        return {
+        const updated = {
           ...r,
           status: 'Completed' as const,
           completedAt: Date.now(),
           answers,
           grading
         };
+        db.saveInterview(updated);
+        return updated;
       }
       return r;
     }));
@@ -288,6 +297,7 @@ const AppContent: React.FC = () => {
   };
 
   const handleSendMessage = (msg: DirectMessage) => {
+    db.saveMessage(msg);
     setMessages(prev => [msg, ...prev]);
   };
 
