@@ -30,7 +30,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   onCompleteInterview,
   onSendMessage
 }) => {
-  const [activeTab, setActiveTab] = useState<'invites' | 'messages'>('messages');
+  const [activeTab, setActiveTab] = useState<'invites' | 'messages'>('invites');
   const [activeInterviewModalReq, setActiveInterviewModalReq] = useState<AIInterviewRequest | null>(null);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -44,7 +44,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
     const threadMap = new Map<string, DirectMessage[]>();
 
     messages.forEach(msg => {
-      const partnerId = msg.senderId === myId ? msg.receiverId : msg.senderId;
+      const partnerId = msg.senderId === myId || (isTalent && msg.senderId === 'demo-talent') ? msg.receiverId : msg.senderId;
       const partnerKey = msg.subject?.startsWith('Re:')
         ? msg.subject.replace(/^Re:\s*/, '')
         : msg.subject;
@@ -58,17 +58,17 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
       const sorted = msgs.sort((a, b) => a.timestamp - b.timestamp);
       const lastMsg = sorted[sorted.length - 1];
       const partnerId = key.split('__')[0];
-      const partnerMsg = sorted.find(m => m.senderId !== myId) || sorted[0];
+      const partnerMsg = sorted.find(m => m.senderId !== myId && m.senderId !== 'demo-talent') || sorted[0];
       return {
         partnerId,
-        partnerName: partnerMsg.senderId === myId ? partnerMsg.senderName : partnerMsg.senderName,
+        partnerName: partnerMsg.senderName,
         partnerRole: partnerMsg.senderRole,
         messages: sorted,
         lastMessage: lastMsg,
         unreadCount: sorted.filter(m => !m.isRead && m.senderId !== myId).length
       };
     }).sort((a, b) => b.lastMessage.timestamp - a.lastMessage.timestamp);
-  }, [messages, myId]);
+  }, [messages, myId, isTalent]);
 
   const activeThread = threads.find(t => t.partnerId + '__' + (t.messages[0]?.subject?.replace(/^Re:\s*/, '') || '') === activeThreadId)
     || (activeThreadId ? threads[0] : null);
@@ -89,8 +89,8 @@ export const MessagesView: React.FC<MessagesViewProps> = ({
   }, [threads.length]);
 
   const relevantRequests = isTalent
-    ? interviewRequests.filter(r => r.candidateId === (user?.id || 'demo-talent'))
-    : interviewRequests.filter(r => r.companyId === (companyUser?.id || 'company-demo'));
+    ? interviewRequests.filter(r => r.candidateId === user?.id || r.candidateId === 'demo-talent' || !r.candidateId)
+    : interviewRequests.filter(r => r.companyId === companyUser?.id || r.companyId === 'company-demo' || !r.companyId);
 
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
